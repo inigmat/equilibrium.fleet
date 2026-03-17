@@ -265,9 +265,11 @@ st.markdown(
 if solution.summary:
     cols = st.columns(5)
     s = solution.summary
+    cb = solution.cost_breakdown
+    operational_cost = cb["rental"] + cb["relocation"]
 
     with cols[0]:
-        st.metric("💰 Total cost", f"${s['total_cost']:,.0f}")
+        st.metric("💰 Operational cost", f"${operational_cost:,.0f}")
     with cols[1]:
         st.metric("🔧 Units assigned", f"{s['units_assigned']}")
     with cols[2]:
@@ -277,12 +279,25 @@ if solution.summary:
     with cols[4]:
         st.metric("📊 Avg utilisation", f"{s['avg_utilisation']}%")
 
+    if cb["penalty"] > 0:
+        st.warning(
+            f"Demand gap: \\${cb['penalty']:,.0f} in model penalties — "
+            f"{s['unmet_demand_days']} demand-days unmet "
+            f"× \\${penalty}/day. "
+            "This is not a real expenditure — it reflects a supply "
+            "shortfall. Consider adding units of the scarce type."
+        )
+
     if greedy and greedy.summary and show_comparison:
-        savings = greedy.summary["total_cost"] - s["total_cost"]
-        pct = 100 * savings / max(greedy.summary["total_cost"], 1)
+        g_op = (
+            greedy.cost_breakdown["rental"]
+            + greedy.cost_breakdown["relocation"]
+        )
+        savings = g_op - operational_cost
+        pct = 100 * savings / max(g_op, 1)
         if savings > 0:
             st.success(
-                f"✅ Savings vs greedy baseline: "
+                f"✅ Operational savings vs greedy baseline: "
                 f"**${savings:,.0f}** ({pct:.1f}%)"
             )
         elif savings < 0:
@@ -588,11 +603,17 @@ After filling the tables, press **▶ Optimise** in the sidebar.
     st.markdown("### 📈 Reading the results")
     st.markdown("""
 **KPI cards:**
-- **Total cost** — objective value: rental + relocations + penalties
+- **Operational cost** — real expenditure: rental rates + relocation costs
 - **Units assigned** — machines that received at least one assignment
 - **Relocations** — total number of site-to-site moves
-- **Unmet demand-days** — days where demand was not fully covered (0 = perfect)
+- **Unmet demand-days** — days where demand was not fully covered
+  (0 = all demand satisfied)
 - **Avg utilisation** — average % of available days a machine is assigned
+
+> If any demand goes unmet, a **demand gap warning** appears below the
+> cards showing the model penalty amount. This is *not* a real cost —
+> it is a solver signal that the fleet lacks units of a certain type.
+> Penalty size = unmet demand-days × penalty rate ($/day).
 
 **Result tabs:**
 - **📅 Schedule** — Gantt chart showing where each machine works each day
