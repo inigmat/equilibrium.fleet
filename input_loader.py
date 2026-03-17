@@ -65,52 +65,38 @@ DEFAULT_EQUIPMENT_DF = pd.DataFrame([
 DEFAULT_DEMAND_DF = pd.DataFrame([
     {
         "site_id": "S1", "site_name": "Riverside Apartments",
-        "equipment_type": "excavator", "day": 0,
+        "equipment_type": "excavator",
+        "day_from": 0, "day_to": 4,
         "quantity_needed": 1, "min_capacity": 0,
     },
     {
         "site_id": "S1", "site_name": "Riverside Apartments",
-        "equipment_type": "dump_truck", "day": 0,
+        "equipment_type": "dump_truck",
+        "day_from": 0, "day_to": 4,
         "quantity_needed": 2, "min_capacity": 0,
     },
     {
         "site_id": "S1", "site_name": "Riverside Apartments",
-        "equipment_type": "concrete_pump", "day": 0,
-        "quantity_needed": 1, "min_capacity": 0,
-    },
-    {
-        "site_id": "S1", "site_name": "Riverside Apartments",
-        "equipment_type": "excavator", "day": 1,
-        "quantity_needed": 1, "min_capacity": 0,
-    },
-    {
-        "site_id": "S1", "site_name": "Riverside Apartments",
-        "equipment_type": "dump_truck", "day": 1,
-        "quantity_needed": 2, "min_capacity": 0,
-    },
-    {
-        "site_id": "S2", "site_name": "Industrial Plant A",
-        "equipment_type": "excavator", "day": 0,
+        "equipment_type": "concrete_pump",
+        "day_from": 0, "day_to": 4,
         "quantity_needed": 1, "min_capacity": 0,
     },
     {
         "site_id": "S2", "site_name": "Industrial Plant A",
-        "equipment_type": "dump_truck", "day": 0,
+        "equipment_type": "excavator",
+        "day_from": 2, "day_to": 9,
         "quantity_needed": 1, "min_capacity": 0,
     },
     {
         "site_id": "S2", "site_name": "Industrial Plant A",
-        "equipment_type": "crane_truck", "day": 0,
+        "equipment_type": "dump_truck",
+        "day_from": 2, "day_to": 9,
         "quantity_needed": 1, "min_capacity": 0,
     },
     {
         "site_id": "S2", "site_name": "Industrial Plant A",
-        "equipment_type": "excavator", "day": 1,
-        "quantity_needed": 1, "min_capacity": 0,
-    },
-    {
-        "site_id": "S2", "site_name": "Industrial Plant A",
-        "equipment_type": "loader", "day": 1,
+        "equipment_type": "crane_truck",
+        "day_from": 5, "day_to": 14,
         "quantity_needed": 1, "min_capacity": 0,
     },
 ])
@@ -156,14 +142,16 @@ def get_excel_template_bytes() -> bytes:
         ref_dem = pd.DataFrame({
             "Column": [
                 "site_id", "site_name", "equipment_type",
-                "day", "quantity_needed", "min_capacity",
+                "day_from", "day_to",
+                "quantity_needed", "min_capacity",
             ],
             "Description": [
                 "Site identifier (S1, S2, ...)",
                 "Site display name",
                 "Equipment type — must match Equipment_Types sheet",
-                "Day index (0 = first planning day)",
-                "Number of units required",
+                "First day of demand (0 = first planning day)",
+                "Last day of demand (inclusive)",
+                "Number of units required per day",
                 "Minimum productivity threshold (0 = not set)",
             ],
         })
@@ -183,7 +171,30 @@ def get_excel_template_bytes() -> bytes:
     return output.getvalue()
 
 
-# ── Excel parser ─────────────────────────────────────────────────────────────
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _expand_demand_range(
+    site_id: str,
+    site_name: str,
+    eq_type: str,
+    day_from: int,
+    day_to: int,
+    qty: int,
+    min_cap: float,
+) -> list[SiteDemand]:
+    """Expand a day range into individual SiteDemand records."""
+    return [
+        SiteDemand(
+            site_id=site_id,
+            site_name=site_name,
+            equipment_type=eq_type,
+            day=d,
+            quantity_needed=qty,
+            min_capacity=min_cap,
+        )
+        for d in range(day_from, day_to + 1)
+    ]
+
 
 def _resolve_eq_type(raw: str) -> str | None:
     """Resolve equipment type key from English key or label string."""
@@ -278,10 +289,12 @@ def parse_excel_to_problem(
             "Please use the template (Download Template button)."
         )
 
+    cols = set(sheet_dem.columns)
+    has_range = "day_from" in cols and "day_to" in cols
     required_dem = {
-        "site_id", "site_name", "equipment_type", "day", "quantity_needed",
-    }
-    missing = required_dem - set(sheet_dem.columns)
+        "site_id", "site_name", "equipment_type", "quantity_needed",
+    } | ({"day_from", "day_to"} if has_range else {"day"})
+    missing = required_dem - cols
     if missing:
         raise ValueError(
             f"Demand sheet is missing columns: {', '.join(sorted(missing))}"
@@ -306,13 +319,17 @@ def parse_excel_to_problem(
         if qty <= 0:
             continue
         try:
-            demands.append(SiteDemand(
-                site_id=str(row["site_id"]).strip(),
-                site_name=str(row["site_name"]).strip(),
-                equipment_type=eq_type,
-                day=int(row["day"]),
-                quantity_needed=qty,
-                min_capacity=float(row.get("min_capacity", 0) or 0),
+            site_id = str(row["site_id"]).strip()
+            site_name = str(row["site_name"]).strip()
+            min_cap = float(row.get("min_capacity", 0) or 0)
+            if has_range:
+                day_from = int(row["day_from"])
+                day_to = int(row["day_to"])
+            else:
+                day_from = day_to = int(row["day"])
+            demands.extend(_expand_demand_range(
+                site_id, site_name, eq_type,
+                day_from, day_to, qty, min_cap,
             ))
         except Exception as e:
             warnings.append(f"Demand row {i+2}: parse error — {e}")
@@ -362,6 +379,9 @@ def build_problem_from_manual(
             "No equipment found. Please fill in the Equipment table."
         )
 
+    dem_cols = set(dem_df.columns)
+    has_range = "day_from" in dem_cols and "day_to" in dem_cols
+
     demands: list[SiteDemand] = []
     for i, row in dem_df.iterrows():
         eq_type = _resolve_eq_type(row.get("equipment_type", ""))
@@ -375,13 +395,17 @@ def build_problem_from_manual(
         if qty <= 0:
             continue
         try:
-            demands.append(SiteDemand(
-                site_id=str(row["site_id"]).strip(),
-                site_name=str(row["site_name"]).strip(),
-                equipment_type=eq_type,
-                day=int(row["day"]),
-                quantity_needed=qty,
-                min_capacity=float(row.get("min_capacity", 0) or 0),
+            site_id = str(row["site_id"]).strip()
+            site_name = str(row["site_name"]).strip()
+            min_cap = float(row.get("min_capacity", 0) or 0)
+            if has_range:
+                day_from = int(row["day_from"])
+                day_to = int(row["day_to"])
+            else:
+                day_from = day_to = int(row["day"])
+            demands.extend(_expand_demand_range(
+                site_id, site_name, eq_type,
+                day_from, day_to, qty, min_cap,
             ))
         except Exception as e:
             warnings.append(f"Demand row {i+1}: error — {e}")

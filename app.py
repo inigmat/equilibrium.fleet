@@ -130,8 +130,11 @@ if data_mode == "Manual input":
                 "equipment_type": st.column_config.SelectboxColumn(
                     "Type", options=EQUIPMENT_TYPES, required=True,
                 ),
-                "day": st.column_config.NumberColumn(
-                    "Day", min_value=0, step=1, width="small",
+                "day_from": st.column_config.NumberColumn(
+                    "Day from", min_value=0, step=1, width="small",
+                ),
+                "day_to": st.column_config.NumberColumn(
+                    "Day to", min_value=0, step=1, width="small",
                 ),
                 "quantity_needed": st.column_config.NumberColumn(
                     "Qty", min_value=1, step=1, width="small",
@@ -560,8 +563,9 @@ in the sidebar.
 | `site_id` | text | Site ID (`S1`, `S2`, ...) |
 | `site_name` | text | Site display name |
 | `equipment_type` | text | Type key (see table below) |
-| `day` | integer | Day index (0 = first day) |
-| `quantity_needed` | integer | Units required |
+| `day_from` | integer | First day of demand (0 = first day) |
+| `day_to` | integer | Last day of demand (inclusive) |
+| `quantity_needed` | integer | Units required per day |
 | `min_capacity` | number | Min productivity threshold (0 = none) |
 
 ---
