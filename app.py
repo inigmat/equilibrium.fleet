@@ -299,9 +299,12 @@ if solution.summary:
                 f"**\\${savings:,.0f}** ({pct:.1f}%)"
             )
         elif savings < 0:
-            st.warning(
-                f"Greedy total cost is lower by \\${-savings:,.0f} "
-                f"(can occur on very small problems)"
+            st.info(
+                f"Greedy shows lower total cost by \\${-savings:,.0f}. "
+                "CP-SAT charges rental for every day equipment stays "
+                "at a site (including idle days); greedy only charges "
+                "on days with active demand — so costs are not "
+                "directly comparable on sparse schedules."
             )
 
 # ── Main Tabs ────────────────────────────────────────────────────────────────
