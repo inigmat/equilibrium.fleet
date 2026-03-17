@@ -27,37 +27,37 @@ DEFAULT_EQUIPMENT_DF = pd.DataFrame([
     {
         "id": "EQ-001", "name": "CAT 320 #1",
         "type": "excavator", "owned": True,
-        "daily_rate": 9000, "relocation_cost": 45000,
+        "daily_rate": 90, "relocation_cost": 450,
         "capacity": 200, "available_from": 0, "available_to": 19,
     },
     {
         "id": "EQ-002", "name": "KAMAZ 6520 #2",
         "type": "dump_truck", "owned": True,
-        "daily_rate": 6000, "relocation_cost": 10000,
+        "daily_rate": 60, "relocation_cost": 100,
         "capacity": 120, "available_from": 0, "available_to": 19,
     },
     {
         "id": "EQ-003", "name": "KAMAZ 65115 #3",
         "type": "dump_truck", "owned": True,
-        "daily_rate": 5500, "relocation_cost": 10000,
+        "daily_rate": 55, "relocation_cost": 100,
         "capacity": 110, "available_from": 0, "available_to": 19,
     },
     {
         "id": "EQ-004", "name": "Putzmeister 36Z (rental) #4",
         "type": "concrete_pump", "owned": False,
-        "daily_rate": 30000, "relocation_cost": 30000,
+        "daily_rate": 300, "relocation_cost": 300,
         "capacity": 90, "available_from": 2, "available_to": 19,
     },
     {
         "id": "EQ-005", "name": "Liebherr LTM (rental) #5",
         "type": "crane_truck", "owned": False,
-        "daily_rate": 35000, "relocation_cost": 60000,
+        "daily_rate": 350, "relocation_cost": 600,
         "capacity": 40, "available_from": 0, "available_to": 19,
     },
     {
         "id": "EQ-006", "name": "CAT 950M #6",
         "type": "loader", "owned": True,
-        "daily_rate": 7000, "relocation_cost": 20000,
+        "daily_rate": 70, "relocation_cost": 200,
         "capacity": 170, "available_from": 0, "available_to": 19,
     },
 ])
