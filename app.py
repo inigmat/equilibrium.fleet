@@ -289,21 +289,19 @@ if solution.summary:
         )
 
     if greedy and greedy.summary and show_comparison:
-        g_op = (
-            greedy.cost_breakdown["rental"]
-            + greedy.cost_breakdown["relocation"]
-        )
-        savings = g_op - operational_cost
-        pct = 100 * savings / max(g_op, 1)
+        g_total = greedy.summary["total_cost"]
+        cp_total = s["total_cost"]
+        savings = g_total - cp_total
+        pct = 100 * savings / max(g_total, 1)
         if savings > 0:
             st.success(
-                f"✅ Operational savings vs greedy baseline: "
-                f"**${savings:,.0f}** ({pct:.1f}%)"
+                f"✅ Total cost savings vs greedy baseline: "
+                f"**\\${savings:,.0f}** ({pct:.1f}%)"
             )
         elif savings < 0:
             st.warning(
-                f"Greedy is cheaper by ${-savings:,.0f} "
-                f"(uncommon for small problems)"
+                f"Greedy total cost is lower by \\${-savings:,.0f} "
+                f"(can occur on very small problems)"
             )
 
 # ── Main Tabs ────────────────────────────────────────────────────────────────
